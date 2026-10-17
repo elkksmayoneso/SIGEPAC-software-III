@@ -1,51 +1,9 @@
 package sigepac.capas.acceso_datos.repositorios;
-
-import sigepac.capas.acceso_datos.contratos.IRepositorioAlquiler;
-import sigepac.capas.dominio.entidades.EntidadAlquiler;
-import sigepac.capas.infraestructura.BaseDatosCapas;
-import java.util.*;
-
+import sigepac.capas.acceso_datos.contratos.IRepositorioAlquiler; import sigepac.capas.dominio.entidades.EntidadAlquiler; import sigepac.capas.infraestructura.ConexionCapas; import java.sql.*; import java.util.*;
 public class RepositorioAlquiler implements IRepositorioAlquiler {
-    private final BaseDatosCapas bd = BaseDatosCapas.obtenerInstancia();
-
-    @Override
-    public List<EntidadAlquiler> obtenerTodos() {
-        synchronized (bd) {
-            return new ArrayList<>(bd.tablaAlquileres.values());
-        }
-    }
-
-    @Override
-    public List<EntidadAlquiler> obtenerActivosPorNegocio(int idNegocio) {
-        synchronized (bd) {
-            List<EntidadAlquiler> lista = new ArrayList<>();
-            for (EntidadAlquiler a : bd.tablaAlquileres.values()) {
-                if (a.getIdNegocio() == idNegocio && a.getSaldoActual() > 0) {
-                    lista.add(a);
-                }
-            }
-            return lista;
-        }
-    }
-
-    @Override
-    public int guardar(EntidadAlquiler alquiler) {
-        synchronized (bd) {
-            int nuevoId = bd.siguienteIdAlquiler();
-            alquiler.setId(nuevoId);
-            bd.tablaAlquileres.put(nuevoId, alquiler);
-            return nuevoId;
-        }
-    }
-
-    @Override
-    public boolean actualizarSaldoYEstado(int idAlquiler, double nuevoSaldo, String nuevoEstado) {
-        synchronized (bd) {
-            EntidadAlquiler alq = bd.tablaAlquileres.get(idAlquiler);
-            if (alq == null) return false;
-            alq.setSaldoActual(nuevoSaldo);
-            alq.setEstado(nuevoEstado);
-            return true;
-        }
-    }
+ private EntidadAlquiler map(ResultSet r)throws SQLException{return new EntidadAlquiler(r.getInt("alq_id"),r.getInt("neg_id"),r.getString("alq_fecha_inicio"),r.getString("alq_fecha_vencimiento"),r.getDouble("alq_valor_cuota"),r.getDouble("alq_saldo_actual"),r.getString("alq_estado"),r.getString("neg_nombre"),r.getString("neg_local_codigo"));}
+ public List<EntidadAlquiler> obtenerTodos(){List<EntidadAlquiler>a=new ArrayList<>();String q="SELECT a.*,n.neg_nombre,n.neg_local_codigo FROM tbl_alquileres a JOIN tbl_negocios n ON n.neg_id=a.neg_id ORDER BY a.alq_id";try(Connection c=ConexionCapas.abrir();Statement s=c.createStatement();ResultSet r=s.executeQuery(q)){while(r.next())a.add(map(r));return a;}catch(SQLException e){throw ConexionCapas.fallo(e);}}
+ public List<EntidadAlquiler> obtenerActivosPorNegocio(int id){List<EntidadAlquiler>a=new ArrayList<>();String q="SELECT a.*,n.neg_nombre,n.neg_local_codigo FROM tbl_alquileres a JOIN tbl_negocios n ON n.neg_id=a.neg_id WHERE a.neg_id=? AND a.alq_saldo_actual>0 ORDER BY a.alq_id FOR UPDATE";try(Connection c=ConexionCapas.abrir();PreparedStatement p=c.prepareStatement(q)){p.setInt(1,id);try(ResultSet r=p.executeQuery()){while(r.next())a.add(map(r));return a;}}catch(SQLException e){throw ConexionCapas.fallo(e);}}
+ public int guardar(EntidadAlquiler a){String q="INSERT INTO tbl_alquileres(neg_id,alq_fecha_inicio,alq_fecha_vencimiento,alq_valor_cuota,alq_saldo_actual,alq_estado) VALUES(?,?,?,?,?,'PENDIENTE')";try(Connection c=ConexionCapas.abrir();PreparedStatement p=c.prepareStatement(q,Statement.RETURN_GENERATED_KEYS)){p.setInt(1,a.getIdNegocio());p.setDate(2,java.sql.Date.valueOf(a.getFechaInicio()));p.setDate(3,java.sql.Date.valueOf(a.getFechaVencimiento()));p.setBigDecimal(4,java.math.BigDecimal.valueOf(a.getValorCuota()));p.setBigDecimal(5,java.math.BigDecimal.valueOf(a.getValorCuota()));p.executeUpdate();try(ResultSet r=p.getGeneratedKeys()){if(r.next())return r.getInt(1);throw new SQLException("Falta id generado");}}catch(SQLException e){throw ConexionCapas.fallo(e);}}
+ public boolean actualizarSaldoYEstado(int id,double saldo,String estado){try(Connection c=ConexionCapas.abrir();PreparedStatement p=c.prepareStatement("UPDATE tbl_alquileres SET alq_saldo_actual=?,alq_estado=? WHERE alq_id=?")){p.setBigDecimal(1,java.math.BigDecimal.valueOf(saldo));p.setString(2,estado);p.setInt(3,id);return p.executeUpdate()>0;}catch(SQLException e){throw ConexionCapas.fallo(e);}}
 }

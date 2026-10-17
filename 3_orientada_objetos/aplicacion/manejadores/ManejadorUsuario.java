@@ -3,14 +3,16 @@ package sigepac.poo.aplicacion.manejadores;
 import sigepac.poo.dominio.repositorios.IRepositorioCuentaUsuario;
 import sigepac.poo.dominio.entidades.CuentaUsuario;
 import sigepac.poo.dominio.objetos_valor.CorreoElectronico;
-import sigepac.poo.infraestructura.BaseDatosPoo;
+import sigepac.poo.dominio.repositorios.IPuertoCifradorContrasena;
 import java.util.List;
 
 public class ManejadorUsuario {
     private final IRepositorioCuentaUsuario repoCuenta;
+    private final IPuertoCifradorContrasena cifrador;
 
-    public ManejadorUsuario(IRepositorioCuentaUsuario repoCuenta) {
+    public ManejadorUsuario(IRepositorioCuentaUsuario repoCuenta, IPuertoCifradorContrasena cifrador) {
         this.repoCuenta = repoCuenta;
+        this.cifrador = cifrador;
     }
 
     public List<CuentaUsuario> listar() {
@@ -37,7 +39,7 @@ public class ManejadorUsuario {
             nombre.trim(),
             apellido.trim(),
             voCorreo,
-            BaseDatosPoo.cifrarContrasena(contrasena.trim()),
+            cifrador.cifrar(contrasena.trim()),
             rol != null ? rol : "PROPIETARIO",
             telefono.trim()
         );

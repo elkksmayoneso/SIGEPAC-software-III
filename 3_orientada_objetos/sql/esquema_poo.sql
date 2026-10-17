@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS oop_negocios_comerciales (
     numero_local VARCHAR(50) NOT NULL UNIQUE,
     esta_activo BOOLEAN NOT NULL DEFAULT TRUE,
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_poo_biz_prop FOREIGN KEY (id_propietario) 
+    CONSTRAINT fk_poo_biz_prop FOREIGN KEY (id_propietario)
         REFERENCES oop_cuentas_usuario(id_cuenta) ON DELETE RESTRICT ON UPDATE CASCADE,
     INDEX idx_biz_prop (id_propietario)
 ) ENGINE=InnoDB;
@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS oop_deudas_alquiler (
     saldo_actual DECIMAL(12,2) NOT NULL CHECK (saldo_actual >= 0),
     estado VARCHAR(20) NOT NULL,
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_poo_deuda_biz FOREIGN KEY (id_negocio) 
+    CONSTRAINT fk_poo_deuda_biz FOREIGN KEY (id_negocio)
         REFERENCES oop_negocios_comerciales(id_negocio) ON DELETE RESTRICT ON UPDATE CASCADE,
     INDEX idx_deuda_biz (id_negocio)
 ) ENGINE=InnoDB;
@@ -55,14 +55,14 @@ CREATE TABLE IF NOT EXISTS oop_transacciones_pago (
     monto DECIMAL(12,2) NOT NULL CHECK (monto > 0),
     fecha_registro DATETIME NOT NULL,
     metodo_pago VARCHAR(50) NOT NULL DEFAULT 'EFECTIVO',
-    CONSTRAINT fk_poo_pago_deuda FOREIGN KEY (id_deuda) 
+    CONSTRAINT fk_poo_pago_deuda FOREIGN KEY (id_deuda)
         REFERENCES oop_deudas_alquiler(id_deuda) ON DELETE RESTRICT ON UPDATE CASCADE,
     INDEX idx_pago_deuda (id_deuda)
 ) ENGINE=InnoDB;
 
 -- Administradora Inicial
 INSERT INTO oop_cuentas_usuario (nombre, apellido, correo, contrasena_hash, rol, telefono)
-VALUES ('Administradora', 'Plaza', 'admin@sigepac.com', 
-        'e8rOsu9rPqPZZcK1f86h3uT0k7H7aRkWlXN29Bv0qL8k4h89eQOqO', 
+VALUES ('Administradora', 'Plaza', 'admin@sigepac.com',
+        'a2977b682c0a562dbba8616c92c50ac3468055ea2243ca065b39fc70a6e4fa26',
         'ADMINISTRADORA', '3101234567')
-ON DUPLICATE KEY UPDATE correo=correo;
+ON DUPLICATE KEY UPDATE contrasena_hash=VALUES(contrasena_hash);

@@ -1,57 +1,11 @@
 package sigepac.hexagonal.adaptadores.salida.persistencia;
-
-import sigepac.hexagonal.nucleo.puertos.salida.IPuertoPersistenciaUsuario;
-import sigepac.hexagonal.nucleo.dominio.modelos.Usuario;
-
-import java.util.*;
-
+import sigepac.hexagonal.nucleo.puertos.salida.IPuertoPersistenciaUsuario;import sigepac.hexagonal.nucleo.dominio.modelos.Usuario;import java.sql.*;import java.util.*;
 public class AdaptadorPersistenciaUsuario implements IPuertoPersistenciaUsuario {
-    private final BaseDatosHexagonal bd = BaseDatosHexagonal.getInstancia();
-
-    @Override
-    public Usuario guardar(Usuario usuario) {
-        int id = bd.secuenciaUsuario.getAndIncrement();
-        Usuario nuevo = new Usuario(
-                id,
-                usuario.getNombre(),
-                usuario.getApellido(),
-                usuario.getCorreo(),
-                usuario.getContrasenaHash(),
-                usuario.getRol(),
-                usuario.getTelefono()
-        );
-        bd.tablaUsuarios.put(id, nuevo);
-        return nuevo;
-    }
-
-    @Override
-    public boolean actualizar(Usuario usuario) {
-        if (usuario.getId() != null && bd.tablaUsuarios.containsKey(usuario.getId())) {
-            bd.tablaUsuarios.put(usuario.getId(), usuario);
-            return true;
-        }
-        return false;
-    }
-
-    @Override
-    public boolean eliminar(int id) {
-        return bd.tablaUsuarios.remove(id) != null;
-    }
-
-    @Override
-    public Optional<Usuario> buscarPorId(int id) {
-        return Optional.ofNullable(bd.tablaUsuarios.get(id));
-    }
-
-    @Override
-    public Optional<Usuario> buscarPorCorreo(String correo) {
-        return bd.tablaUsuarios.values().stream()
-                .filter(u -> u.getCorreo().equalsIgnoreCase(correo))
-                .findFirst();
-    }
-
-    @Override
-    public List<Usuario> listarTodos() {
-        return new ArrayList<>(bd.tablaUsuarios.values());
-    }
+ private Usuario map(ResultSet r)throws SQLException{return new Usuario(r.getInt("id"),r.getString("nombre"),r.getString("apellido"),r.getString("correo"),r.getString("hash_password"),r.getString("rol"),r.getString("telefono"));}
+ public Usuario guardar(Usuario u){try(Connection c=ConexionHexagonal.abrir();PreparedStatement p=c.prepareStatement("INSERT INTO hex_usuarios(nombre,apellido,correo,hash_password,rol,telefono) VALUES(?,?,?,?,?,?)",Statement.RETURN_GENERATED_KEYS)){p.setString(1,u.getNombre());p.setString(2,u.getApellido());p.setString(3,u.getCorreo());p.setString(4,u.getContrasenaHash());p.setString(5,u.getRol());p.setString(6,u.getTelefono());p.executeUpdate();try(ResultSet r=p.getGeneratedKeys()){if(r.next())return new Usuario(r.getInt(1),u.getNombre(),u.getApellido(),u.getCorreo(),u.getContrasenaHash(),u.getRol(),u.getTelefono());throw new SQLException("Falta id generado");}}catch(SQLException e){throw ConexionHexagonal.fallo(e);}}
+ public boolean actualizar(Usuario u){try(Connection c=ConexionHexagonal.abrir();PreparedStatement p=c.prepareStatement("UPDATE hex_usuarios SET nombre=?,apellido=?,correo=?,hash_password=?,rol=?,telefono=? WHERE id=?")){p.setString(1,u.getNombre());p.setString(2,u.getApellido());p.setString(3,u.getCorreo());p.setString(4,u.getContrasenaHash());p.setString(5,u.getRol());p.setString(6,u.getTelefono());p.setInt(7,u.getId());return p.executeUpdate()>0;}catch(SQLException e){throw ConexionHexagonal.fallo(e);}}
+ public boolean eliminar(int id){try(Connection c=ConexionHexagonal.abrir();PreparedStatement p=c.prepareStatement("DELETE FROM hex_usuarios WHERE id=?")){p.setInt(1,id);return p.executeUpdate()>0;}catch(SQLException e){throw ConexionHexagonal.fallo(e);}}
+ public Optional<Usuario> buscarPorId(int id){try(Connection c=ConexionHexagonal.abrir();PreparedStatement p=c.prepareStatement("SELECT * FROM hex_usuarios WHERE id=?")){p.setInt(1,id);try(ResultSet r=p.executeQuery()){return r.next()?Optional.of(map(r)):Optional.empty();}}catch(SQLException e){throw ConexionHexagonal.fallo(e);}}
+ public Optional<Usuario> buscarPorCorreo(String correo){try(Connection c=ConexionHexagonal.abrir();PreparedStatement p=c.prepareStatement("SELECT * FROM hex_usuarios WHERE correo=?")){p.setString(1,correo);try(ResultSet r=p.executeQuery()){return r.next()?Optional.of(map(r)):Optional.empty();}}catch(SQLException e){throw ConexionHexagonal.fallo(e);}}
+ public List<Usuario> listarTodos(){List<Usuario>a=new ArrayList<>();try(Connection c=ConexionHexagonal.abrir();Statement s=c.createStatement();ResultSet r=s.executeQuery("SELECT * FROM hex_usuarios ORDER BY id")){while(r.next())a.add(map(r));return a;}catch(SQLException e){throw ConexionHexagonal.fallo(e);}}
 }

@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS tbl_negocios (
     neg_local_codigo VARCHAR(30) NOT NULL UNIQUE,
     neg_activo TINYINT(1) NOT NULL DEFAULT 1,
     neg_fecha_alta DATETIME DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_capas_neg_usr FOREIGN KEY (usr_id) 
+    CONSTRAINT fk_capas_neg_usr FOREIGN KEY (usr_id)
         REFERENCES tbl_usuarios(usr_id) ON DELETE RESTRICT ON UPDATE CASCADE,
     INDEX idx_neg_usr (usr_id)
 ) ENGINE=InnoDB;
@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS tbl_alquileres (
     alq_valor_cuota DECIMAL(12,2) NOT NULL CHECK (alq_valor_cuota >= 0),
     alq_saldo_actual DECIMAL(12,2) NOT NULL CHECK (alq_saldo_actual >= 0),
     alq_estado VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE',
-    CONSTRAINT fk_capas_alq_neg FOREIGN KEY (neg_id) 
+    CONSTRAINT fk_capas_alq_neg FOREIGN KEY (neg_id)
         REFERENCES tbl_negocios(neg_id) ON DELETE RESTRICT ON UPDATE CASCADE,
     INDEX idx_alq_neg (neg_id)
 ) ENGINE=InnoDB;
@@ -54,14 +54,14 @@ CREATE TABLE IF NOT EXISTS tbl_pagos (
     pag_monto DECIMAL(12,2) NOT NULL CHECK (pag_monto > 0),
     pag_fecha_registro DATETIME NOT NULL,
     pag_forma_pago VARCHAR(50) NOT NULL DEFAULT 'EFECTIVO',
-    CONSTRAINT fk_capas_pag_alq FOREIGN KEY (alq_id) 
+    CONSTRAINT fk_capas_pag_alq FOREIGN KEY (alq_id)
         REFERENCES tbl_alquileres(alq_id) ON DELETE RESTRICT ON UPDATE CASCADE,
     INDEX idx_pag_alq (alq_id)
 ) ENGINE=InnoDB;
 
 -- Administradora Inicial
 INSERT INTO tbl_usuarios (usr_nombre, usr_apellido, usr_correo, usr_contrasena_hash, usr_rol, usr_telefono)
-VALUES ('Admin', 'Capas', 'admin@sigepac.com', 
-        'e8rOsu9rPqPZZcK1f86h3uT0k7H7aRkWlXN29Bv0qL8k4h89eQOqO', 
+VALUES ('Admin', 'Capas', 'admin@sigepac.com',
+        'f782f5b3af9b009436361e8a76d8c83f98c5fb63ee6a0f3636a08fcc12087ebd',
         'ADMINISTRADORA', '3009998877')
 ON DUPLICATE KEY UPDATE usr_correo=usr_correo;

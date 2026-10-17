@@ -4,6 +4,7 @@ import com.sun.net.httpserver.HttpServer;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpExchange;
 import sigepac.capas.acceso_datos.repositorios.*;
+import sigepac.capas.infraestructura.CifradorContrasenaCapas;
 import sigepac.capas.logica_negocio.servicios.*;
 import sigepac.capas.presentacion.controladores.*;
 import sigepac.capas.dominio.entidades.*;
@@ -22,9 +23,10 @@ public class ServidorCapas {
     private static final RepositorioNegocio repoNeg = new RepositorioNegocio();
     private static final RepositorioAlquiler repoAlq = new RepositorioAlquiler();
     private static final RepositorioPago repoPag = new RepositorioPago();
+    private static final CifradorContrasenaCapas cifrador = new CifradorContrasenaCapas();
 
-    private static final ServicioAutenticacion srvAuth = new ServicioAutenticacion(repoUsr);
-    private static final ServicioUsuario srvUsr = new ServicioUsuario(repoUsr);
+    private static final ServicioAutenticacion srvAuth = new ServicioAutenticacion(repoUsr, cifrador);
+    private static final ServicioUsuario srvUsr = new ServicioUsuario(repoUsr, cifrador);
     private static final ServicioNegocio srvNeg = new ServicioNegocio(repoNeg, repoUsr);
     private static final ServicioAlquiler srvAlq = new ServicioAlquiler(repoAlq, repoNeg);
     private static final ServicioPago srvPag = new ServicioPago(repoNeg, repoAlq, repoPag);

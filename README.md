@@ -27,7 +27,7 @@ Este proyecto implementa el sistema **4 veces de manera completamente independie
 ## 🛡️ Requisitos No Funcionales (RNF)
 
 * **RNF3 (Seguridad de la Información):** Ninguna contraseña se almacena en texto plano. Cada arquitectura implementa algoritmos criptográficos `SHA-256` con semilla secreta (*Salt*), protegiendo la información frente a accesos no autorizados o filtraciones.
-* **RNF5 (Concurrencia e Integridad Transaccional):** Se garantiza atomicidad `ACID` mediante mecanismos de sincronización y exclusión mutua (`synchronized`, bloqueos reentrantes) que impiden condiciones de carrera (*Race Conditions*) o pérdidas de información durante pagos concurrentes simultáneos.
+* **RNF5 (Concurrencia e Integridad Transaccional):** Los flujos de pago usan transacciones JDBC de InnoDB, bloqueo de las deudas afectadas y rollback ante fallos para impedir que pagos y saldos queden desincronizados.
 * **RNF7 (Persistencia y Bases de Datos Aisladas):** Cada una de las 4 iteraciones cuenta con su propio script de base de datos relacional independiente en SQL (`InnoDB`, claves foráneas, restricciones de chequeo) y almacén de persistencia aislado:
   * `1_mvc/sql/esquema_mvc.sql`
   * `2_capas/sql/esquema_capas.sql`
@@ -72,8 +72,9 @@ Este proyecto implementa el sistema **4 veces de manera completamente independie
 sigepac_java/
 │
 ├── 1_mvc/                                    # ITERACIÓN 1: ARQUITECTURA MVC
-│   ├── configuracion/                        # Configuración y conexión de BD
-│   │   └── BaseDatos.java
+│   ├── configuracion/                        # Configuración JDBC y seguridad
+│   │   ├── ConexionMvc.java
+│   │   └── CifradorContrasenaMvc.java
 │   ├── controladores/                        # Controladores de flujo
 │   │   ├── ControladorAutenticacion.java
 │   │   ├── ControladorUsuario.java
@@ -95,8 +96,9 @@ sigepac_java/
 │   │   ├── contratos/                        # Interfaces de repositorios (ISP/DIP)
 │   │   └── repositorios/                     # Implementación concreta DAL
 │   ├── dominio/entidades/                    # Entidades de dominio transversal
-│   ├── infraestructura/                      # Motor de persistencia aislado
-│   │   └── BaseDatosCapas.java
+│   ├── infraestructura/                      # Conexión JDBC y adaptadores de seguridad
+│   │   ├── ConexionCapas.java
+│   │   └── CifradorContrasenaCapas.java
 │   ├── logica_negocio/                       # Capa BLL (Business Logic Layer)
 │   │   ├── contratos/                        # Interfaces de servicios de negocio
 │   │   └── servicios/                        # Reglas de negocio y orquestación
@@ -118,9 +120,10 @@ sigepac_java/
 │   │   ├── excepciones/                      # Excepciones de dominio
 │   │   ├── objetos_valor/                    # Value Objects inmutables (Dinero, Correo)
 │   │   └── repositorios/                     # Contratos de persistencia de dominio
-│   ├── infraestructura/                      # Adaptadores de infraestructura
-│   │   ├── BaseDatosPoo.java
-│   │   └── persistencia/
+│   ├── infraestructura/                      # Adaptadores JDBC y de seguridad
+│   │   ├── ConexionPoo.java
+│   │   ├── AdaptadorCifradorPoo.java
+│   │   └── persistencia/                     # Repositorios JDBC
 │   ├── presentacion/controladores/
 │   ├── servidor/                             # Servidor HTTP embebido (Puerto 8003)
 │   │   └── ServidorPoo.java
@@ -131,7 +134,7 @@ sigepac_java/
 │   ├── adaptadores/
 │   │   ├── entrada/web/                      # Driving Adapters (Controladores Web)
 │   │   └── salida/                           # Driven Adapters
-│   │       ├── persistencia/                 # Adaptador de almacenamiento aislado
+│   │       ├── persistencia/                 # Adaptadores JDBC y transacciones
 │   │       └── seguridad/                    # Adaptador cifrador SHA-256
 │   ├── nucleo/                               # Core Hexagonal Agnóstico
 │   │   ├── aplicacion/servicios/             # Implementación de Casos de Uso
@@ -158,7 +161,28 @@ sigepac_java/
 
 ## 🚀 Compilación y Ejecución
 
-El proyecto utiliza las librerías nativas de **Java SE (JDK 22)** sin necesidad de pesados contenedores externos ni dependencias de terceros.
+El proyecto usa Java SE (JDK 22), JDBC y MySQL Connector/J. Cada arquitectura tiene su propia base de datos y los modelos/repositorios persisten en las tablas de su esquema.
+
+### Configuración de las bases de datos
+
+1. Instale MySQL 8 o MariaDB y ejecute una vez los cuatro scripts `sql/esquema_*.sql` de sus carpetas. Cada script crea una base independiente.
+2. Instale MySQL Connector/J y defina `SIGEPAC_JDBC_JAR` con la ruta completa al controlador `.jar`.
+3. Configure usuario y contraseña como variables de entorno. Cada arquitectura admite URL JDBC y credenciales propias:
+
+| Arquitectura | URL JDBC | Usuario | Contraseña |
+| --- | --- | --- | --- |
+| MVC | `SIGEPAC_MVC_JDBC_URL` | `SIGEPAC_MVC_DB_USER` | `SIGEPAC_MVC_DB_PASSWORD` |
+| Capas | `SIGEPAC_CAPAS_JDBC_URL` | `SIGEPAC_CAPAS_DB_USER` | `SIGEPAC_CAPAS_DB_PASSWORD` |
+| POO | `SIGEPAC_POO_JDBC_URL` | `SIGEPAC_POO_DB_USER` | `SIGEPAC_POO_DB_PASSWORD` |
+| Hexagonal | `SIGEPAC_HEX_JDBC_URL` | `SIGEPAC_HEX_DB_USER` | `SIGEPAC_HEX_DB_PASSWORD` |
+
+Las URLs predeterminadas apuntan a `localhost:3306` y a la base nombrada en cada esquema. El usuario predeterminado es `root` sin contraseña. En PowerShell, por ejemplo:
+
+```powershell
+$env:SIGEPAC_JDBC_JAR = "C:\ruta\mysql-connector-j.jar"
+$env:SIGEPAC_MVC_DB_USER = "sigepac_mvc"
+$env:SIGEPAC_MVC_DB_PASSWORD = "su-clave"
+```
 
 ### 1. Compilación Completa
 Desde la terminal PowerShell o CMD en la carpeta raíz `sigepac_java`:
@@ -170,7 +194,7 @@ javac -encoding UTF-8 -d "bin" $fuentes
 ### 2. Ejecución de la Suite de Pruebas Automatizadas
 Para verificar el 100% del funcionamiento de las 4 arquitecturas y las 5 Historias de Usuario:
 ```powershell
-java -cp "bin" sigepac.Lanzador pruebas
+java -cp "bin;$env:SIGEPAC_JDBC_JAR" sigepac.Lanzador pruebas
 ```
 *Salida esperada:*
 ```text
@@ -194,31 +218,31 @@ Puedes iniciar los servidores web usando el comando `Lanzador` con el nombre de 
 
 * **Iniciar Servidor MVC (Puerto 8001):**
   ```powershell
-  java -cp "bin" sigepac.Lanzador mvc
+  java -cp "bin;$env:SIGEPAC_JDBC_JAR" sigepac.Lanzador mvc
   ```
   Acceso en el navegador: [http://localhost:8001](http://localhost:8001)
 
 * **Iniciar Servidor En Capas (Puerto 8002):**
   ```powershell
-  java -cp "bin" sigepac.Lanzador capas
+  java -cp "bin;$env:SIGEPAC_JDBC_JAR" sigepac.Lanzador capas
   ```
   Acceso en el navegador: [http://localhost:8002](http://localhost:8002)
 
 * **Iniciar Servidor Orientado a Objetos (Puerto 8003):**
   ```powershell
-  java -cp "bin" sigepac.Lanzador poo
+  java -cp "bin;$env:SIGEPAC_JDBC_JAR" sigepac.Lanzador poo
   ```
   Acceso en el navegador: [http://localhost:8003](http://localhost:8003)
 
 * **Iniciar Servidor Hexagonal (Puerto 8004):**
   ```powershell
-  java -cp "bin" sigepac.Lanzador hexagonal
+  java -cp "bin;$env:SIGEPAC_JDBC_JAR" sigepac.Lanzador hexagonal
   ```
   Acceso en el navegador: [http://localhost:8004](http://localhost:8004)
 
 * **Iniciar TODAS las arquitecturas simultáneamente:**
   ```powershell
-  java -cp "bin" sigepac.Lanzador todas
+  java -cp "bin;$env:SIGEPAC_JDBC_JAR" sigepac.Lanzador todas
   ```
 
 ---

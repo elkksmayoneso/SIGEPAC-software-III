@@ -3,14 +3,16 @@ package sigepac.capas.logica_negocio.servicios;
 import sigepac.capas.logica_negocio.contratos.IServicioUsuario;
 import sigepac.capas.acceso_datos.contratos.IRepositorioUsuario;
 import sigepac.capas.dominio.entidades.EntidadUsuario;
-import sigepac.capas.infraestructura.BaseDatosCapas;
+import sigepac.capas.logica_negocio.contratos.IPuertoCifradorContrasena;
 import java.util.List;
 
 public class ServicioUsuario implements IServicioUsuario {
     private final IRepositorioUsuario repoUsuario;
+    private final IPuertoCifradorContrasena cifrador;
 
-    public ServicioUsuario(IRepositorioUsuario repoUsuario) {
+    public ServicioUsuario(IRepositorioUsuario repoUsuario, IPuertoCifradorContrasena cifrador) {
         this.repoUsuario = repoUsuario;
+        this.cifrador = cifrador;
     }
 
     @Override
@@ -38,7 +40,7 @@ public class ServicioUsuario implements IServicioUsuario {
             nombre.trim(),
             apellido.trim(),
             correo.trim(),
-            BaseDatosCapas.cifrarContrasena(contrasena.trim()),
+            cifrador.cifrar(contrasena.trim()),
             rol != null ? rol : "PROPIETARIO",
             telefono.trim()
         );

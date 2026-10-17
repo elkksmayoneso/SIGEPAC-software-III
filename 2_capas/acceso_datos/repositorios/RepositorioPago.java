@@ -1,27 +1,6 @@
 package sigepac.capas.acceso_datos.repositorios;
-
-import sigepac.capas.acceso_datos.contratos.IRepositorioPago;
-import sigepac.capas.dominio.entidades.EntidadPago;
-import sigepac.capas.infraestructura.BaseDatosCapas;
-import java.util.*;
-
+import sigepac.capas.acceso_datos.contratos.IRepositorioPago; import sigepac.capas.dominio.entidades.EntidadPago; import sigepac.capas.infraestructura.ConexionCapas; import java.sql.*; import java.util.*;
 public class RepositorioPago implements IRepositorioPago {
-    private final BaseDatosCapas bd = BaseDatosCapas.obtenerInstancia();
-
-    @Override
-    public int guardar(EntidadPago pago) {
-        synchronized (bd) {
-            int nuevoId = bd.siguienteIdPago();
-            pago.setId(nuevoId);
-            bd.tablaPagos.put(nuevoId, pago);
-            return nuevoId;
-        }
-    }
-
-    @Override
-    public List<EntidadPago> obtenerTodos() {
-        synchronized (bd) {
-            return new ArrayList<>(bd.tablaPagos.values());
-        }
-    }
+ public int guardar(EntidadPago p){String q="INSERT INTO tbl_pagos(alq_id,pag_monto,pag_fecha_registro,pag_forma_pago) VALUES(?,?,?,?)";try(Connection c=ConexionCapas.abrir();PreparedStatement s=c.prepareStatement(q,Statement.RETURN_GENERATED_KEYS)){s.setInt(1,p.getIdAlquiler());s.setBigDecimal(2,java.math.BigDecimal.valueOf(p.getMonto()));s.setTimestamp(3,Timestamp.valueOf(p.getFechaRegistro().length()==10?p.getFechaRegistro()+" 00:00:00":p.getFechaRegistro()));s.setString(4,p.getFormaPago());s.executeUpdate();try(ResultSet r=s.getGeneratedKeys()){if(r.next())return r.getInt(1);throw new SQLException("Falta id generado");}}catch(SQLException e){throw ConexionCapas.fallo(e);}}
+ public List<EntidadPago> obtenerTodos(){List<EntidadPago>a=new ArrayList<>();String q="SELECT p.*,n.neg_nombre FROM tbl_pagos p JOIN tbl_alquileres a ON a.alq_id=p.alq_id JOIN tbl_negocios n ON n.neg_id=a.neg_id ORDER BY p.pag_id DESC";try(Connection c=ConexionCapas.abrir();Statement s=c.createStatement();ResultSet r=s.executeQuery(q)){while(r.next())a.add(new EntidadPago(r.getInt("pag_id"),r.getInt("alq_id"),r.getDouble("pag_monto"),r.getString("pag_fecha_registro"),r.getString("pag_forma_pago"),r.getString("neg_nombre")));return a;}catch(SQLException e){throw ConexionCapas.fallo(e);}}
 }

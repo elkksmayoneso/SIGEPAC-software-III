@@ -1,43 +1,9 @@
 package sigepac.hexagonal.adaptadores.salida.persistencia;
-
-import sigepac.hexagonal.nucleo.puertos.salida.IPuertoPersistenciaPago;
-import sigepac.hexagonal.nucleo.dominio.modelos.Pago;
-
-import java.util.*;
-import java.util.stream.Collectors;
-
+import sigepac.hexagonal.nucleo.puertos.salida.IPuertoPersistenciaPago;import sigepac.hexagonal.nucleo.dominio.modelos.Pago;import java.sql.*;import java.util.*;
 public class AdaptadorPersistenciaPago implements IPuertoPersistenciaPago {
-    private final BaseDatosHexagonal bd = BaseDatosHexagonal.getInstancia();
-
-    @Override
-    public Pago guardar(Pago pago) {
-        int id = bd.secuenciaPago.getAndIncrement();
-        Pago nuevo = new Pago(
-                id,
-                pago.getAlquilerId(),
-                pago.getMontoAbonado(),
-                pago.getFechaAbono(),
-                pago.getFormaAbono()
-        );
-        nuevo.setNombreNegocio(pago.getNombreNegocio());
-        bd.tablaPagos.put(id, nuevo);
-        return nuevo;
-    }
-
-    @Override
-    public Optional<Pago> buscarPorId(int id) {
-        return Optional.ofNullable(bd.tablaPagos.get(id));
-    }
-
-    @Override
-    public List<Pago> listarTodos() {
-        return new ArrayList<>(bd.tablaPagos.values());
-    }
-
-    @Override
-    public List<Pago> listarPorAlquiler(int alquilerId) {
-        return bd.tablaPagos.values().stream()
-                .filter(p -> p.getAlquilerId() == alquilerId)
-                .collect(Collectors.toList());
-    }
+ private Pago map(ResultSet r)throws SQLException{return new Pago(r.getInt("id"),r.getInt("alquiler_id"),r.getDouble("monto_abonado"),r.getString("fecha_abono"),r.getString("forma_abono"));}
+ public Pago guardar(Pago p){try(Connection c=ConexionHexagonal.abrir();PreparedStatement s=c.prepareStatement("INSERT INTO hex_pagos(alquiler_id,monto_abonado,fecha_abono,forma_abono) VALUES(?,?,?,?)",Statement.RETURN_GENERATED_KEYS)){s.setInt(1,p.getAlquilerId());s.setBigDecimal(2,java.math.BigDecimal.valueOf(p.getMontoAbonado()));s.setTimestamp(3,Timestamp.valueOf(p.getFechaAbono().length()==10?p.getFechaAbono()+" 00:00:00":p.getFechaAbono()));s.setString(4,p.getFormaAbono());s.executeUpdate();try(ResultSet r=s.getGeneratedKeys()){if(r.next())return new Pago(r.getInt(1),p.getAlquilerId(),p.getMontoAbonado(),p.getFechaAbono(),p.getFormaAbono());throw new SQLException("Falta id generado");}}catch(SQLException e){throw ConexionHexagonal.fallo(e);}}
+ public Optional<Pago> buscarPorId(int id){try(Connection c=ConexionHexagonal.abrir();PreparedStatement p=c.prepareStatement("SELECT * FROM hex_pagos WHERE id=?")){p.setInt(1,id);try(ResultSet r=p.executeQuery()){return r.next()?Optional.of(map(r)):Optional.empty();}}catch(SQLException e){throw ConexionHexagonal.fallo(e);}}
+ public List<Pago> listarTodos(){List<Pago>a=new ArrayList<>();try(Connection c=ConexionHexagonal.abrir();Statement s=c.createStatement();ResultSet r=s.executeQuery("SELECT * FROM hex_pagos ORDER BY id DESC")){while(r.next())a.add(map(r));return a;}catch(SQLException e){throw ConexionHexagonal.fallo(e);}}
+ public List<Pago> listarPorAlquiler(int id){List<Pago>a=new ArrayList<>();try(Connection c=ConexionHexagonal.abrir();PreparedStatement p=c.prepareStatement("SELECT * FROM hex_pagos WHERE alquiler_id=? ORDER BY id")){p.setInt(1,id);try(ResultSet r=p.executeQuery()){while(r.next())a.add(map(r));return a;}}catch(SQLException e){throw ConexionHexagonal.fallo(e);}}
 }

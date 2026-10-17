@@ -4,6 +4,7 @@ import com.sun.net.httpserver.HttpServer;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpExchange;
 import sigepac.poo.infraestructura.persistencia.*;
+import sigepac.poo.infraestructura.AdaptadorCifradorPoo;
 import sigepac.poo.aplicacion.manejadores.*;
 import sigepac.poo.presentacion.controladores.*;
 import sigepac.poo.dominio.entidades.*;
@@ -17,12 +18,13 @@ import java.util.*;
 public class ServidorPoo {
     private static final int PUERTO = 8003;
 
-    private static final RepositorioCuentaUsuarioMemoria repoCuenta = new RepositorioCuentaUsuarioMemoria();
-    private static final RepositorioNegocioComercialMemoria repoNeg = new RepositorioNegocioComercialMemoria();
-    private static final RepositorioDeudaAlquilerMemoria repoDeuda = new RepositorioDeudaAlquilerMemoria();
+    private static final RepositorioCuentaUsuarioJdbc repoCuenta = new RepositorioCuentaUsuarioJdbc();
+    private static final RepositorioNegocioComercialJdbc repoNeg = new RepositorioNegocioComercialJdbc();
+    private static final RepositorioDeudaAlquilerJdbc repoDeuda = new RepositorioDeudaAlquilerJdbc();
+    private static final AdaptadorCifradorPoo cifrador = new AdaptadorCifradorPoo();
 
-    private static final ManejadorAutenticacion manAuth = new ManejadorAutenticacion(repoCuenta);
-    private static final ManejadorUsuario manUsr = new ManejadorUsuario(repoCuenta);
+    private static final ManejadorAutenticacion manAuth = new ManejadorAutenticacion(repoCuenta, cifrador);
+    private static final ManejadorUsuario manUsr = new ManejadorUsuario(repoCuenta, cifrador);
     private static final ManejadorNegocio manNeg = new ManejadorNegocio(repoNeg, repoCuenta);
     private static final ManejadorDeuda manDeuda = new ManejadorDeuda(repoDeuda, repoNeg);
     private static final ManejadorPago manPago = new ManejadorPago(repoDeuda, repoNeg);

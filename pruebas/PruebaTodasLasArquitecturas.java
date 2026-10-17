@@ -54,11 +54,14 @@ public class PruebaTodasLasArquitecturas {
         System.out.println(" 1. PROBANDO ARQUITECTURA MVC (Modelo - Vista - Controlador)");
         System.out.println("--------------------------------------------------------------------------------");
 
-        sigepac.mvc.controladores.ControladorAutenticacion ctrlAuth = new sigepac.mvc.controladores.ControladorAutenticacion();
-        sigepac.mvc.controladores.ControladorUsuario ctrlUsr = new sigepac.mvc.controladores.ControladorUsuario();
-        sigepac.mvc.controladores.ControladorNegocio ctrlNeg = new sigepac.mvc.controladores.ControladorNegocio();
-        sigepac.mvc.controladores.ControladorAlquiler ctrlAlq = new sigepac.mvc.controladores.ControladorAlquiler();
-        sigepac.mvc.controladores.ControladorPago ctrlPag = new sigepac.mvc.controladores.ControladorPago();
+        sigepac.mvc.configuracion.CifradorContrasenaMvc cifrador = new sigepac.mvc.configuracion.CifradorContrasenaMvc();
+        sigepac.mvc.modelos.ModeloUsuario modeloUsuario = new sigepac.mvc.modelos.ModeloUsuario(cifrador);
+        sigepac.mvc.modelos.ModeloNegocio modeloNegocio = new sigepac.mvc.modelos.ModeloNegocio();
+        sigepac.mvc.controladores.ControladorAutenticacion ctrlAuth = new sigepac.mvc.controladores.ControladorAutenticacion(modeloUsuario, cifrador);
+        sigepac.mvc.controladores.ControladorUsuario ctrlUsr = new sigepac.mvc.controladores.ControladorUsuario(modeloUsuario);
+        sigepac.mvc.controladores.ControladorNegocio ctrlNeg = new sigepac.mvc.controladores.ControladorNegocio(modeloNegocio);
+        sigepac.mvc.controladores.ControladorAlquiler ctrlAlq = new sigepac.mvc.controladores.ControladorAlquiler(new sigepac.mvc.modelos.ModeloAlquiler());
+        sigepac.mvc.controladores.ControladorPago ctrlPag = new sigepac.mvc.controladores.ControladorPago(new sigepac.mvc.modelos.ModeloPago(), modeloNegocio);
 
         // HU-01: Autenticación
         try {
@@ -146,8 +149,8 @@ public class PruebaTodasLasArquitecturas {
         sigepac.capas.acceso_datos.repositorios.RepositorioAlquiler repoAlq = new sigepac.capas.acceso_datos.repositorios.RepositorioAlquiler();
         sigepac.capas.acceso_datos.repositorios.RepositorioPago repoPag = new sigepac.capas.acceso_datos.repositorios.RepositorioPago();
 
-        sigepac.capas.logica_negocio.servicios.ServicioAutenticacion srvAuth = new sigepac.capas.logica_negocio.servicios.ServicioAutenticacion(repoUsr);
-        sigepac.capas.logica_negocio.servicios.ServicioUsuario srvUsr = new sigepac.capas.logica_negocio.servicios.ServicioUsuario(repoUsr);
+        sigepac.capas.logica_negocio.servicios.ServicioAutenticacion srvAuth = new sigepac.capas.logica_negocio.servicios.ServicioAutenticacion(repoUsr, new sigepac.capas.infraestructura.CifradorContrasenaCapas());
+        sigepac.capas.logica_negocio.servicios.ServicioUsuario srvUsr = new sigepac.capas.logica_negocio.servicios.ServicioUsuario(repoUsr, new sigepac.capas.infraestructura.CifradorContrasenaCapas());
         sigepac.capas.logica_negocio.servicios.ServicioNegocio srvNeg = new sigepac.capas.logica_negocio.servicios.ServicioNegocio(repoNeg, repoUsr);
         sigepac.capas.logica_negocio.servicios.ServicioAlquiler srvAlq = new sigepac.capas.logica_negocio.servicios.ServicioAlquiler(repoAlq, repoNeg);
         sigepac.capas.logica_negocio.servicios.ServicioPago srvPag = new sigepac.capas.logica_negocio.servicios.ServicioPago(repoNeg, repoAlq, repoPag);
@@ -213,12 +216,12 @@ public class PruebaTodasLasArquitecturas {
         System.out.println(" 3. PROBANDO ARQUITECTURA ORIENTADA A OBJETOS (Dominio Rico y Value Objects)");
         System.out.println("--------------------------------------------------------------------------------");
 
-        sigepac.poo.infraestructura.persistencia.RepositorioCuentaUsuarioMemoria repoUsr = new sigepac.poo.infraestructura.persistencia.RepositorioCuentaUsuarioMemoria();
-        sigepac.poo.infraestructura.persistencia.RepositorioNegocioComercialMemoria repoNeg = new sigepac.poo.infraestructura.persistencia.RepositorioNegocioComercialMemoria();
-        sigepac.poo.infraestructura.persistencia.RepositorioDeudaAlquilerMemoria repoAlq = new sigepac.poo.infraestructura.persistencia.RepositorioDeudaAlquilerMemoria();
+        sigepac.poo.infraestructura.persistencia.RepositorioCuentaUsuarioJdbc repoUsr = new sigepac.poo.infraestructura.persistencia.RepositorioCuentaUsuarioJdbc();
+        sigepac.poo.infraestructura.persistencia.RepositorioNegocioComercialJdbc repoNeg = new sigepac.poo.infraestructura.persistencia.RepositorioNegocioComercialJdbc();
+        sigepac.poo.infraestructura.persistencia.RepositorioDeudaAlquilerJdbc repoAlq = new sigepac.poo.infraestructura.persistencia.RepositorioDeudaAlquilerJdbc();
 
-        sigepac.poo.aplicacion.manejadores.ManejadorAutenticacion manAuth = new sigepac.poo.aplicacion.manejadores.ManejadorAutenticacion(repoUsr);
-        sigepac.poo.aplicacion.manejadores.ManejadorUsuario manUsr = new sigepac.poo.aplicacion.manejadores.ManejadorUsuario(repoUsr);
+        sigepac.poo.aplicacion.manejadores.ManejadorAutenticacion manAuth = new sigepac.poo.aplicacion.manejadores.ManejadorAutenticacion(repoUsr, new sigepac.poo.infraestructura.AdaptadorCifradorPoo());
+        sigepac.poo.aplicacion.manejadores.ManejadorUsuario manUsr = new sigepac.poo.aplicacion.manejadores.ManejadorUsuario(repoUsr, new sigepac.poo.infraestructura.AdaptadorCifradorPoo());
         sigepac.poo.aplicacion.manejadores.ManejadorNegocio manNeg = new sigepac.poo.aplicacion.manejadores.ManejadorNegocio(repoNeg, repoUsr);
         sigepac.poo.aplicacion.manejadores.ManejadorDeuda manDeuda = new sigepac.poo.aplicacion.manejadores.ManejadorDeuda(repoAlq, repoNeg);
         sigepac.poo.aplicacion.manejadores.ManejadorPago manPago = new sigepac.poo.aplicacion.manejadores.ManejadorPago(repoAlq, repoNeg);

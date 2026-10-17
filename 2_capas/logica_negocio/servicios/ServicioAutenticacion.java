@@ -3,13 +3,15 @@ package sigepac.capas.logica_negocio.servicios;
 import sigepac.capas.logica_negocio.contratos.IServicioAutenticacion;
 import sigepac.capas.acceso_datos.contratos.IRepositorioUsuario;
 import sigepac.capas.dominio.entidades.EntidadUsuario;
-import sigepac.capas.infraestructura.BaseDatosCapas;
+import sigepac.capas.logica_negocio.contratos.IPuertoCifradorContrasena;
 
 public class ServicioAutenticacion implements IServicioAutenticacion {
     private final IRepositorioUsuario repoUsuario;
+    private final IPuertoCifradorContrasena cifrador;
 
-    public ServicioAutenticacion(IRepositorioUsuario repoUsuario) {
+    public ServicioAutenticacion(IRepositorioUsuario repoUsuario, IPuertoCifradorContrasena cifrador) {
         this.repoUsuario = repoUsuario;
+        this.cifrador = cifrador;
     }
 
     @Override
@@ -21,7 +23,7 @@ public class ServicioAutenticacion implements IServicioAutenticacion {
         EntidadUsuario usuario = repoUsuario.buscarPorCorreo(correo.trim());
 
         // HU-01 & RNF3: Validación de credenciales
-        if (usuario == null || !BaseDatosCapas.verificarContrasena(contrasena.trim(), usuario.getContrasenaHash())) {
+        if (usuario == null || !cifrador.verificar(contrasena.trim(), usuario.getContrasenaHash())) {
             throw new SecurityException("Credenciales incorrectas. Verifique correo y contraseña.");
         }
 

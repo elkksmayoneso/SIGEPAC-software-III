@@ -4,6 +4,8 @@ import com.sun.net.httpserver.HttpServer;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpExchange;
 import sigepac.mvc.controladores.*;
+import sigepac.mvc.modelos.*;
+import sigepac.mvc.configuracion.CifradorContrasenaMvc;
 
 import java.io.*;
 import java.net.InetSocketAddress;
@@ -14,11 +16,16 @@ import java.util.*;
 public class ServidorMvc {
     private static final int PUERTO = 8001;
 
-    private static final ControladorAutenticacion ctrlAuth = new ControladorAutenticacion();
-    private static final ControladorUsuario ctrlUsuario = new ControladorUsuario();
-    private static final ControladorNegocio ctrlNegocio = new ControladorNegocio();
-    private static final ControladorAlquiler ctrlAlquiler = new ControladorAlquiler();
-    private static final ControladorPago ctrlPago = new ControladorPago();
+    private static final CifradorContrasenaMvc cifrador = new CifradorContrasenaMvc();
+    private static final ModeloUsuario modeloUsuario = new ModeloUsuario(cifrador);
+    private static final ModeloNegocio modeloNegocio = new ModeloNegocio();
+    private static final ModeloAlquiler modeloAlquiler = new ModeloAlquiler();
+    private static final ModeloPago modeloPago = new ModeloPago();
+    private static final ControladorAutenticacion ctrlAuth = new ControladorAutenticacion(modeloUsuario, cifrador);
+    private static final ControladorUsuario ctrlUsuario = new ControladorUsuario(modeloUsuario);
+    private static final ControladorNegocio ctrlNegocio = new ControladorNegocio(modeloNegocio);
+    private static final ControladorAlquiler ctrlAlquiler = new ControladorAlquiler(modeloAlquiler);
+    private static final ControladorPago ctrlPago = new ControladorPago(modeloPago, modeloNegocio);
 
     public static void main(String[] args) throws IOException {
         HttpServer servidor = HttpServer.create(new InetSocketAddress(PUERTO), 0);

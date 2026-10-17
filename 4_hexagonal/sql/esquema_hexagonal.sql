@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS hex_negocios (
     numero_local VARCHAR(50) NOT NULL UNIQUE,
     estado VARCHAR(20) NOT NULL DEFAULT 'ACTIVO',
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_hex_neg_prop FOREIGN KEY (propietario_id) 
+    CONSTRAINT fk_hex_neg_prop FOREIGN KEY (propietario_id)
         REFERENCES hex_usuarios(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     INDEX idx_neg_prop (propietario_id)
 ) ENGINE=InnoDB;
@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS hex_alquileres (
     saldo_por_pagar DECIMAL(12,2) NOT NULL CHECK (saldo_por_pagar >= 0),
     estado_deuda VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE',
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_hex_alq_neg FOREIGN KEY (negocio_id) 
+    CONSTRAINT fk_hex_alq_neg FOREIGN KEY (negocio_id)
         REFERENCES hex_negocios(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     INDEX idx_alq_neg (negocio_id)
 ) ENGINE=InnoDB;
@@ -56,14 +56,14 @@ CREATE TABLE IF NOT EXISTS hex_pagos (
     fecha_abono DATETIME NOT NULL,
     forma_abono VARCHAR(50) NOT NULL DEFAULT 'EFECTIVO',
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_hex_pag_alq FOREIGN KEY (alquiler_id) 
+    CONSTRAINT fk_hex_pag_alq FOREIGN KEY (alquiler_id)
         REFERENCES hex_alquileres(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     INDEX idx_pag_alq (alquiler_id)
 ) ENGINE=InnoDB;
 
 -- Administradora Inicial
 INSERT INTO hex_usuarios (nombre, apellido, correo, hash_password, rol, telefono)
-VALUES ('Admin', 'Hexagonal', 'admin@sigepac.com', 
-        'e8rOsu9rPqPZZcK1f86h3uT0k7H7aRkWlXN29Bv0qL8k4h89eQOqO', 
+VALUES ('Admin', 'Hexagonal', 'admin@sigepac.com',
+        'vUOfGBzQaNpOPKVBIQPGcWRPiZe0Ix/DIHS4qMSbjZU=',
         'ADMINISTRADORA', '3200001122')
-ON DUPLICATE KEY UPDATE correo=correo;
+ON DUPLICATE KEY UPDATE hash_password=VALUES(hash_password);

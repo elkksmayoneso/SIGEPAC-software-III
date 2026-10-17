@@ -2,7 +2,7 @@ package sigepac.poo.dominio.entidades;
 
 import sigepac.poo.dominio.objetos_valor.CorreoElectronico;
 import sigepac.poo.dominio.excepciones.CredencialesInvalidasExcepcion;
-import sigepac.poo.infraestructura.BaseDatosPoo;
+import sigepac.poo.dominio.repositorios.IPuertoCifradorContrasena;
 
 public class CuentaUsuario {
     private final Integer idCuenta;
@@ -24,8 +24,8 @@ public class CuentaUsuario {
     }
 
     // HU-01 & RNF3: Método rico de entidad para verificación de credenciales
-    public void verificarContrasena(String contrasenaPlana) {
-        if (!BaseDatosPoo.verificarContrasena(contrasenaPlana, this.contrasenaHash)) {
+    public void verificarContrasena(String contrasenaPlana, IPuertoCifradorContrasena cifrador) {
+        if (!cifrador.verificar(contrasenaPlana, this.contrasenaHash)) {
             throw new CredencialesInvalidasExcepcion("Credenciales incorrectas. Verifique correo y contraseña ingresados.");
         }
     }

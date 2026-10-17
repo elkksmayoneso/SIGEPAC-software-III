@@ -4,12 +4,15 @@ import sigepac.poo.dominio.repositorios.IRepositorioCuentaUsuario;
 import sigepac.poo.dominio.entidades.CuentaUsuario;
 import sigepac.poo.dominio.objetos_valor.CorreoElectronico;
 import sigepac.poo.dominio.excepciones.CredencialesInvalidasExcepcion;
+import sigepac.poo.dominio.repositorios.IPuertoCifradorContrasena;
 
 public class ManejadorAutenticacion {
     private final IRepositorioCuentaUsuario repoCuenta;
+    private final IPuertoCifradorContrasena cifrador;
 
-    public ManejadorAutenticacion(IRepositorioCuentaUsuario repoCuenta) {
+    public ManejadorAutenticacion(IRepositorioCuentaUsuario repoCuenta, IPuertoCifradorContrasena cifrador) {
         this.repoCuenta = repoCuenta;
+        this.cifrador = cifrador;
     }
 
     public CuentaUsuario ejecutar(String correo, String contrasena) {
@@ -25,7 +28,7 @@ public class ManejadorAutenticacion {
             throw new CredencialesInvalidasExcepcion("Credenciales incorrectas. Verifique correo y contraseña ingresados.");
         }
 
-        cuenta.verificarContrasena(contrasena);
+        cuenta.verificarContrasena(contrasena, cifrador);
         return cuenta;
     }
 }

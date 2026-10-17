@@ -1,10 +1,11 @@
 package sigepac.mvc.controladores;
 
-import sigepac.mvc.modelos.ModeloNegocio;
+import sigepac.mvc.modelos.contratos.IModeloNegocio;
 import java.util.*;
 
 public class ControladorNegocio {
-    private final ModeloNegocio modeloNegocio = new ModeloNegocio();
+    private final IModeloNegocio modeloNegocio;
+    public ControladorNegocio(IModeloNegocio modeloNegocio) { this.modeloNegocio = modeloNegocio; }
 
     public List<Map<String, Object>> listarNegocios() {
         return modeloNegocio.obtenerTodos();

@@ -1,55 +1,12 @@
 package sigepac.hexagonal.adaptadores.salida.persistencia;
-
-import sigepac.hexagonal.nucleo.puertos.salida.IPuertoPersistenciaNegocio;
-import sigepac.hexagonal.nucleo.dominio.modelos.Negocio;
-
-import java.util.*;
-
+import sigepac.hexagonal.nucleo.puertos.salida.IPuertoPersistenciaNegocio;import sigepac.hexagonal.nucleo.dominio.modelos.Negocio;import java.sql.*;import java.util.*;
 public class AdaptadorPersistenciaNegocio implements IPuertoPersistenciaNegocio {
-    private final BaseDatosHexagonal bd = BaseDatosHexagonal.getInstancia();
-
-    @Override
-    public Negocio guardar(Negocio negocio) {
-        int id = bd.secuenciaNegocio.getAndIncrement();
-        Negocio nuevo = new Negocio(
-                id,
-                negocio.getPropietarioId(),
-                negocio.getNombreComercial(),
-                negocio.getNumeroLocal(),
-                negocio.getEstado()
-        );
-        bd.tablaNegocios.put(id, nuevo);
-        return nuevo;
-    }
-
-    @Override
-    public boolean actualizar(Negocio negocio) {
-        if (negocio.getId() != null && bd.tablaNegocios.containsKey(negocio.getId())) {
-            bd.tablaNegocios.put(negocio.getId(), negocio);
-            return true;
-        }
-        return false;
-    }
-
-    @Override
-    public boolean eliminar(int id) {
-        return bd.tablaNegocios.remove(id) != null;
-    }
-
-    @Override
-    public Optional<Negocio> buscarPorId(int id) {
-        return Optional.ofNullable(bd.tablaNegocios.get(id));
-    }
-
-    @Override
-    public Optional<Negocio> buscarPorLocal(String numeroLocal) {
-        return bd.tablaNegocios.values().stream()
-                .filter(n -> n.getNumeroLocal().equalsIgnoreCase(numeroLocal))
-                .findFirst();
-    }
-
-    @Override
-    public List<Negocio> listarTodos() {
-        return new ArrayList<>(bd.tablaNegocios.values());
-    }
+ private Negocio map(ResultSet r)throws SQLException{Negocio n=new Negocio(r.getInt("id"),r.getInt("propietario_id"),r.getString("nombre_comercial"),r.getString("numero_local"),r.getString("estado"));try{n.setNombrePropietario(r.getString("propietario"));}catch(SQLException ignored){}return n;}
+ private static final String SEL="SELECT n.*,CONCAT(u.nombre,' ',u.apellido) propietario FROM hex_negocios n JOIN hex_usuarios u ON u.id=n.propietario_id";
+ public Negocio guardar(Negocio n){try(Connection c=ConexionHexagonal.abrir();PreparedStatement p=c.prepareStatement("INSERT INTO hex_negocios(propietario_id,nombre_comercial,numero_local,estado) VALUES(?,?,?,?)",Statement.RETURN_GENERATED_KEYS)){p.setInt(1,n.getPropietarioId());p.setString(2,n.getNombreComercial());p.setString(3,n.getNumeroLocal());p.setString(4,n.getEstado());p.executeUpdate();try(ResultSet r=p.getGeneratedKeys()){if(r.next())return new Negocio(r.getInt(1),n.getPropietarioId(),n.getNombreComercial(),n.getNumeroLocal(),n.getEstado());throw new SQLException("Falta id generado");}}catch(SQLException e){throw ConexionHexagonal.fallo(e);}}
+ public boolean actualizar(Negocio n){try(Connection c=ConexionHexagonal.abrir();PreparedStatement p=c.prepareStatement("UPDATE hex_negocios SET propietario_id=?,nombre_comercial=?,numero_local=?,estado=? WHERE id=?")){p.setInt(1,n.getPropietarioId());p.setString(2,n.getNombreComercial());p.setString(3,n.getNumeroLocal());p.setString(4,n.getEstado());p.setInt(5,n.getId());return p.executeUpdate()>0;}catch(SQLException e){throw ConexionHexagonal.fallo(e);}}
+ public boolean eliminar(int id){try(Connection c=ConexionHexagonal.abrir();PreparedStatement p=c.prepareStatement("UPDATE hex_negocios SET estado='INACTIVO' WHERE id=?")){p.setInt(1,id);return p.executeUpdate()>0;}catch(SQLException e){throw ConexionHexagonal.fallo(e);}}
+ public Optional<Negocio> buscarPorId(int id){try(Connection c=ConexionHexagonal.abrir();PreparedStatement p=c.prepareStatement(SEL+" WHERE n.id=? AND n.estado='ACTIVO' FOR UPDATE")){p.setInt(1,id);try(ResultSet r=p.executeQuery()){return r.next()?Optional.of(map(r)):Optional.empty();}}catch(SQLException e){throw ConexionHexagonal.fallo(e);}}
+ public Optional<Negocio> buscarPorLocal(String local){try(Connection c=ConexionHexagonal.abrir();PreparedStatement p=c.prepareStatement(SEL+" WHERE n.numero_local=? AND n.estado='ACTIVO'")){p.setString(1,local);try(ResultSet r=p.executeQuery()){return r.next()?Optional.of(map(r)):Optional.empty();}}catch(SQLException e){throw ConexionHexagonal.fallo(e);}}
+ public List<Negocio> listarTodos(){List<Negocio>a=new ArrayList<>();try(Connection c=ConexionHexagonal.abrir();Statement s=c.createStatement();ResultSet r=s.executeQuery(SEL+" WHERE n.estado='ACTIVO' ORDER BY n.id")){while(r.next())a.add(map(r));return a;}catch(SQLException e){throw ConexionHexagonal.fallo(e);}}
 }

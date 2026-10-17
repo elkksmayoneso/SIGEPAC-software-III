@@ -1,73 +1,13 @@
 package sigepac.mvc.modelos;
-
-import sigepac.mvc.configuracion.BaseDatos;
-import java.util.*;
-
-public class ModeloUsuario {
-    private final BaseDatos bd = BaseDatos.obtenerInstancia();
-
-    public Map<String, Object> buscarPorCorreo(String correo) {
-        synchronized (bd) {
-            for (Map<String, Object> u : bd.tablaUsuarios.values()) {
-                if (correo.equalsIgnoreCase((String) u.get("correo"))) {
-                    return new HashMap<>(u);
-                }
-            }
-            return null;
-        }
-    }
-
-    public Map<String, Object> buscarPorId(int id) {
-        synchronized (bd) {
-            Map<String, Object> u = bd.tablaUsuarios.get(id);
-            return u != null ? new HashMap<>(u) : null;
-        }
-    }
-
-    public List<Map<String, Object>> obtenerTodos() {
-        synchronized (bd) {
-            List<Map<String, Object>> lista = new ArrayList<>();
-            for (Map<String, Object> u : bd.tablaUsuarios.values()) {
-                lista.add(new HashMap<>(u));
-            }
-            return lista;
-        }
-    }
-
-    public boolean crear(String nombre, String apellido, String correo, String contrasena, String rol, String telefono) {
-        synchronized (bd) {
-            if (buscarPorCorreo(correo) != null) {
-                return false;
-            }
-            int nuevoId = bd.obtenerSiguienteIdUsuario();
-            Map<String, Object> usuario = new HashMap<>();
-            usuario.put("id_usuario", nuevoId);
-            usuario.put("nombre", nombre);
-            usuario.put("apellido", apellido);
-            usuario.put("correo", correo);
-            usuario.put("contrasena_hash", BaseDatos.cifrarContrasena(contrasena));
-            usuario.put("rol", rol);
-            usuario.put("telefono", telefono);
-            bd.tablaUsuarios.put(nuevoId, usuario);
-            return true;
-        }
-    }
-
-    public boolean actualizar(int id, String nombre, String apellido, String telefono, String rol) {
-        synchronized (bd) {
-            Map<String, Object> usuario = bd.tablaUsuarios.get(id);
-            if (usuario == null) return false;
-            usuario.put("nombre", nombre);
-            usuario.put("apellido", apellido);
-            usuario.put("telefono", telefono);
-            usuario.put("rol", rol);
-            return true;
-        }
-    }
-
-    public boolean eliminar(int id) {
-        synchronized (bd) {
-            return bd.tablaUsuarios.remove(id) != null;
-        }
-    }
+import sigepac.mvc.configuracion.ConexionMvc; import sigepac.mvc.configuracion.IPuertoCifradorContrasena; import java.sql.*; import java.util.*;
+public class ModeloUsuario implements sigepac.mvc.modelos.contratos.IModeloUsuario {
+ private final IPuertoCifradorContrasena cifrador;
+ public ModeloUsuario(IPuertoCifradorContrasena cifrador){this.cifrador=cifrador;}
+ private Map<String,Object> map(ResultSet r)throws SQLException{Map<String,Object> m=new HashMap<>();m.put("id_usuario",r.getInt("id_usuario"));m.put("nombre",r.getString("nombre"));m.put("apellido",r.getString("apellido"));m.put("correo",r.getString("correo"));m.put("contrasena_hash",r.getString("contrasena_hash"));m.put("rol",r.getString("rol"));m.put("telefono",r.getString("telefono"));return m;}
+ public Map<String,Object> buscarPorCorreo(String correo){try(Connection c=ConexionMvc.abrir();PreparedStatement p=c.prepareStatement("SELECT * FROM usuarios WHERE correo=?")){p.setString(1,correo);try(ResultSet r=p.executeQuery()){return r.next()?map(r):null;}}catch(SQLException e){throw ConexionMvc.fallo(e);}}
+ public Map<String,Object> buscarPorId(int id){try(Connection c=ConexionMvc.abrir();PreparedStatement p=c.prepareStatement("SELECT * FROM usuarios WHERE id_usuario=?")){p.setInt(1,id);try(ResultSet r=p.executeQuery()){return r.next()?map(r):null;}}catch(SQLException e){throw ConexionMvc.fallo(e);}}
+ public List<Map<String,Object>> obtenerTodos(){List<Map<String,Object>> a=new ArrayList<>();try(Connection c=ConexionMvc.abrir();Statement s=c.createStatement();ResultSet r=s.executeQuery("SELECT * FROM usuarios ORDER BY id_usuario")){while(r.next())a.add(map(r));return a;}catch(SQLException e){throw ConexionMvc.fallo(e);}}
+ public boolean crear(String n,String a,String correo,String contrasena,String rol,String tel){try(Connection c=ConexionMvc.abrir();PreparedStatement p=c.prepareStatement("INSERT INTO usuarios(nombre,apellido,correo,contrasena_hash,rol,telefono) VALUES(?,?,?,?,?,?)")){p.setString(1,n);p.setString(2,a);p.setString(3,correo);p.setString(4,cifrador.cifrar(contrasena));p.setString(5,rol);p.setString(6,tel);return p.executeUpdate()==1;}catch(SQLIntegrityConstraintViolationException e){return false;}catch(SQLException e){throw ConexionMvc.fallo(e);}}
+ public boolean actualizar(int id,String n,String a,String tel,String rol){try(Connection c=ConexionMvc.abrir();PreparedStatement p=c.prepareStatement("UPDATE usuarios SET nombre=?,apellido=?,telefono=?,rol=? WHERE id_usuario=?")){p.setString(1,n);p.setString(2,a);p.setString(3,tel);p.setString(4,rol);p.setInt(5,id);return p.executeUpdate()>0;}catch(SQLException e){throw ConexionMvc.fallo(e);}}
+ public boolean eliminar(int id){try(Connection c=ConexionMvc.abrir();PreparedStatement p=c.prepareStatement("DELETE FROM usuarios WHERE id_usuario=?")){p.setInt(1,id);return p.executeUpdate()>0;}catch(SQLException e){throw ConexionMvc.fallo(e);}}
 }

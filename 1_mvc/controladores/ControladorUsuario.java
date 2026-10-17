@@ -1,10 +1,11 @@
 package sigepac.mvc.controladores;
 
-import sigepac.mvc.modelos.ModeloUsuario;
+import sigepac.mvc.modelos.contratos.IModeloUsuario;
 import java.util.*;
 
 public class ControladorUsuario {
-    private final ModeloUsuario modeloUsuario = new ModeloUsuario();
+    private final IModeloUsuario modeloUsuario;
+    public ControladorUsuario(IModeloUsuario modeloUsuario) { this.modeloUsuario = modeloUsuario; }
 
     public List<Map<String, Object>> listarUsuarios() {
         return modeloUsuario.obtenerTodos();

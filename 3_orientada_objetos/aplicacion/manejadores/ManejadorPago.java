@@ -6,6 +6,7 @@ import sigepac.poo.dominio.entidades.DeudaAlquiler;
 import sigepac.poo.dominio.entidades.TransaccionPago;
 import sigepac.poo.dominio.objetos_valor.Dinero;
 import sigepac.poo.dominio.excepciones.NegocioNoEncontradoExcepcion;
+import sigepac.poo.infraestructura.ConexionPoo;
 import java.util.List;
 
 public class ManejadorPago {
@@ -21,39 +22,28 @@ public class ManejadorPago {
         return repoDeuda.obtenerTodosLosPagos();
     }
 
-    public synchronized boolean procesarPago(int idNegocio, double monto, String fechaPago, String metodo) {
+    public boolean procesarPago(int idNegocio, double monto, String fechaPago, String metodo) {
         // HU-05: El flujo debe requerir buscar y seleccionar el negocio primero; si no existe, error explícito
-        if (!repoNegocio.existe(idNegocio)) {
-            throw new NegocioNoEncontradoExcepcion("Error: El negocio no existe en el sistema. Registre el negocio previamente.");
-        }
-
         if (monto <= 0) {
             throw new IllegalArgumentException("El monto a pagar debe ser mayor a cero.");
         }
 
-        List<DeudaAlquiler> activas = repoDeuda.obtenerActivosPorNegocio(idNegocio);
-        if (activas.isEmpty()) {
-            throw new IllegalStateException("El negocio no tiene deudas pendientes con saldo por liquidar.");
-        }
-
-        double montoRestante = monto;
-
-        for (DeudaAlquiler deuda : activas) {
-            if (montoRestante <= 0) break;
-
-            double saldoVal = deuda.getSaldoActual().getCantidad();
-            double porcion = Math.min(montoRestante, saldoVal);
-
-            // HU-05: El Aggregate Root aplica la lógica de abono y muta su saldo interno
-            TransaccionPago tx = deuda.registrarAbono(new Dinero(porcion), metodo != null ? metodo : "EFECTIVO", fechaPago);
-
-            // Persistir transacción y actualizar estado del Aggregate
-            repoDeuda.registrarPago(tx);
-            repoDeuda.actualizarDeuda(deuda);
-
-            montoRestante -= porcion;
-        }
-
-        return true;
+        return ConexionPoo.transaccion(() -> {
+            if (!repoNegocio.existe(idNegocio)) throw new NegocioNoEncontradoExcepcion("El negocio no existe o está inactivo.");
+            List<DeudaAlquiler> activas = repoDeuda.obtenerActivosPorNegocio(idNegocio);
+            if (activas.isEmpty()) throw new IllegalStateException("El negocio no tiene deudas pendientes con saldo por liquidar.");
+            java.math.BigDecimal restante = java.math.BigDecimal.valueOf(monto).setScale(2, java.math.RoundingMode.HALF_UP);
+            for (DeudaAlquiler deuda : activas) {
+                if (restante.signum() <= 0) break;
+                java.math.BigDecimal saldo = java.math.BigDecimal.valueOf(deuda.getSaldoActual().getCantidad());
+                java.math.BigDecimal aplicado = restante.min(saldo);
+                TransaccionPago tx = deuda.registrarAbono(new Dinero(aplicado), metodo == null ? "EFECTIVO" : metodo, fechaPago);
+                repoDeuda.registrarPago(tx);
+                if (!repoDeuda.actualizarDeuda(deuda)) throw new IllegalStateException("No se pudo actualizar la deuda.");
+                restante = restante.subtract(aplicado);
+            }
+            if (restante.signum() > 0) throw new IllegalArgumentException("El monto supera el total de las deudas pendientes.");
+            return true;
+        });
     }
 }

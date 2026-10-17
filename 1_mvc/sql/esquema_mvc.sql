@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS negocios (
     local_numero VARCHAR(50) NOT NULL UNIQUE,
     estado VARCHAR(20) NOT NULL DEFAULT 'ACTIVO',
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_mvc_neg_usr FOREIGN KEY (id_usuario) 
+    CONSTRAINT fk_mvc_neg_usr FOREIGN KEY (id_usuario)
         REFERENCES usuarios(id_usuario) ON DELETE RESTRICT ON UPDATE CASCADE,
     INDEX idx_neg_usr (id_usuario)
 ) ENGINE=InnoDB;
@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS alquileres (
     saldo_pendiente DECIMAL(12, 2) NOT NULL CHECK (saldo_pendiente >= 0),
     estado VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE',
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_mvc_alq_neg FOREIGN KEY (id_negocio) 
+    CONSTRAINT fk_mvc_alq_neg FOREIGN KEY (id_negocio)
         REFERENCES negocios(id_negocio) ON DELETE RESTRICT ON UPDATE CASCADE,
     INDEX idx_alq_neg (id_negocio)
 ) ENGINE=InnoDB;
@@ -56,14 +56,14 @@ CREATE TABLE IF NOT EXISTS pagos (
     fecha_pago DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     metodo_pago VARCHAR(50) NOT NULL DEFAULT 'EFECTIVO',
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_mvc_pag_alq FOREIGN KEY (id_alquiler) 
+    CONSTRAINT fk_mvc_pag_alq FOREIGN KEY (id_alquiler)
         REFERENCES alquileres(id_alquiler) ON DELETE RESTRICT ON UPDATE CASCADE,
     INDEX idx_pag_alq (id_alquiler)
 ) ENGINE=InnoDB;
 
 -- Usuario Inicial por defecto (Administradora: admin@sigepac.com / Contraseña: Admin123*)
 INSERT INTO usuarios (nombre, apellido, correo, contrasena_hash, rol, telefono)
-VALUES ('Administradora', 'Plaza Cívica', 'admin@sigepac.com', 
-        'e8rOsu9rPqPZZcK1f86h3uT0k7H7aRkWlXN29Bv0qL8k4h89eQOqO', 
+VALUES ('Administradora', 'Plaza Cívica', 'admin@sigepac.com',
+        '42e5ddb2985fd21cff0c867a6fed0e77a51a61024222530729a7ad0ebc39044f',
         'ADMINISTRADORA', '3101234567')
-ON DUPLICATE KEY UPDATE correo=correo;
+ON DUPLICATE KEY UPDATE contrasena_hash=VALUES(contrasena_hash);

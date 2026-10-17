@@ -1,60 +1,12 @@
 package sigepac.hexagonal.adaptadores.salida.persistencia;
-
-import sigepac.hexagonal.nucleo.puertos.salida.IPuertoPersistenciaAlquiler;
-import sigepac.hexagonal.nucleo.dominio.modelos.Alquiler;
-
-import java.util.*;
-import java.util.stream.Collectors;
-
+import sigepac.hexagonal.nucleo.puertos.salida.IPuertoPersistenciaAlquiler;import sigepac.hexagonal.nucleo.dominio.modelos.Alquiler;import java.sql.*;import java.util.*;
 public class AdaptadorPersistenciaAlquiler implements IPuertoPersistenciaAlquiler {
-    private final BaseDatosHexagonal bd = BaseDatosHexagonal.getInstancia();
-
-    @Override
-    public Alquiler guardar(Alquiler alquiler) {
-        int id = bd.secuenciaAlquiler.getAndIncrement();
-        Alquiler nuevo = new Alquiler(
-                id,
-                alquiler.getNegocioId(),
-                alquiler.getFechaInicio(),
-                alquiler.getFechaCorte(),
-                alquiler.getCanonMensual(),
-                alquiler.getSaldoPorPagar(),
-                alquiler.getEstadoDeuda()
-        );
-        bd.tablaAlquileres.put(id, nuevo);
-        return nuevo;
-    }
-
-    @Override
-    public boolean actualizar(Alquiler alquiler) {
-        if (alquiler.getId() != null && bd.tablaAlquileres.containsKey(alquiler.getId())) {
-            bd.tablaAlquileres.put(alquiler.getId(), alquiler);
-            return true;
-        }
-        return false;
-    }
-
-    @Override
-    public Optional<Alquiler> buscarPorId(int id) {
-        return Optional.ofNullable(bd.tablaAlquileres.get(id));
-    }
-
-    @Override
-    public List<Alquiler> listarTodos() {
-        return new ArrayList<>(bd.tablaAlquileres.values());
-    }
-
-    @Override
-    public List<Alquiler> listarPorNegocio(int negocioId) {
-        return bd.tablaAlquileres.values().stream()
-                .filter(a -> a.getNegocioId() == negocioId)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public Optional<Alquiler> buscarActivoPorNegocio(int negocioId) {
-        return bd.tablaAlquileres.values().stream()
-                .filter(a -> a.getNegocioId() == negocioId && a.getSaldoPorPagar() > 0)
-                .findFirst();
-    }
+ private Alquiler map(ResultSet r)throws SQLException{return new Alquiler(r.getInt("id"),r.getInt("negocio_id"),r.getString("fecha_inicio"),r.getString("fecha_corte"),r.getDouble("canon_mensual"),r.getDouble("saldo_por_pagar"),r.getString("estado_deuda"));}
+ public Alquiler guardar(Alquiler a){String q="INSERT INTO hex_alquileres(negocio_id,fecha_inicio,fecha_corte,canon_mensual,saldo_por_pagar,estado_deuda) VALUES(?,?,?,?,?,?)";try(Connection c=ConexionHexagonal.abrir();PreparedStatement p=c.prepareStatement(q,Statement.RETURN_GENERATED_KEYS)){p.setInt(1,a.getNegocioId());p.setDate(2,java.sql.Date.valueOf(a.getFechaInicio()));p.setDate(3,java.sql.Date.valueOf(a.getFechaCorte()));p.setBigDecimal(4,java.math.BigDecimal.valueOf(a.getCanonMensual()));p.setBigDecimal(5,java.math.BigDecimal.valueOf(a.getSaldoPorPagar()));p.setString(6,a.getEstadoDeuda());p.executeUpdate();try(ResultSet r=p.getGeneratedKeys()){if(r.next())return new Alquiler(r.getInt(1),a.getNegocioId(),a.getFechaInicio(),a.getFechaCorte(),a.getCanonMensual(),a.getSaldoPorPagar(),a.getEstadoDeuda());throw new SQLException("Falta id generado");}}catch(SQLException e){throw ConexionHexagonal.fallo(e);}}
+ public boolean actualizar(Alquiler a){try(Connection c=ConexionHexagonal.abrir();PreparedStatement p=c.prepareStatement("UPDATE hex_alquileres SET saldo_por_pagar=?,estado_deuda=? WHERE id=?")){p.setBigDecimal(1,java.math.BigDecimal.valueOf(a.getSaldoPorPagar()));p.setString(2,a.getEstadoDeuda());p.setInt(3,a.getId());return p.executeUpdate()>0;}catch(SQLException e){throw ConexionHexagonal.fallo(e);}}
+ public Optional<Alquiler> buscarPorId(int id){try(Connection c=ConexionHexagonal.abrir();PreparedStatement p=c.prepareStatement("SELECT * FROM hex_alquileres WHERE id=?")){p.setInt(1,id);try(ResultSet r=p.executeQuery()){return r.next()?Optional.of(map(r)):Optional.empty();}}catch(SQLException e){throw ConexionHexagonal.fallo(e);}}
+ public List<Alquiler> listarTodos(){List<Alquiler>a=new ArrayList<>();try(Connection c=ConexionHexagonal.abrir();Statement s=c.createStatement();ResultSet r=s.executeQuery("SELECT * FROM hex_alquileres ORDER BY id")){while(r.next())a.add(map(r));return a;}catch(SQLException e){throw ConexionHexagonal.fallo(e);}}
+ public List<Alquiler> listarPorNegocio(int id){List<Alquiler>a=new ArrayList<>();try(Connection c=ConexionHexagonal.abrir();PreparedStatement p=c.prepareStatement("SELECT * FROM hex_alquileres WHERE negocio_id=? ORDER BY id")){p.setInt(1,id);try(ResultSet r=p.executeQuery()){while(r.next())a.add(map(r));return a;}}catch(SQLException e){throw ConexionHexagonal.fallo(e);}}
+ public Optional<Alquiler> buscarActivoPorNegocio(int id){String q="SELECT * FROM hex_alquileres WHERE negocio_id=? AND saldo_por_pagar>0 ORDER BY id LIMIT 1 FOR UPDATE";try(Connection c=ConexionHexagonal.abrir();PreparedStatement p=c.prepareStatement(q)){p.setInt(1,id);try(ResultSet r=p.executeQuery()){return r.next()?Optional.of(map(r)):Optional.empty();}}catch(SQLException e){throw ConexionHexagonal.fallo(e);}}
+ public List<Alquiler> listarActivosPorNegocio(int id){List<Alquiler>a=new ArrayList<>();try(Connection c=ConexionHexagonal.abrir();PreparedStatement p=c.prepareStatement("SELECT * FROM hex_alquileres WHERE negocio_id=? AND saldo_por_pagar>0 ORDER BY id FOR UPDATE")){p.setInt(1,id);try(ResultSet r=p.executeQuery()){while(r.next())a.add(map(r));return a;}}catch(SQLException e){throw ConexionHexagonal.fallo(e);}}
 }

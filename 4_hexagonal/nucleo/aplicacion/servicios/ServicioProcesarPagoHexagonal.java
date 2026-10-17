@@ -32,26 +32,31 @@ public class ServicioProcesarPagoHexagonal implements ICasoUsoProcesarPago {
     public Pago procesarPago(int negocioId, double monto, String fechaAbono, String formaAbono) {
         // Criterio HU-05: El flujo debe requerir buscar y seleccionar el negocio primero;
         // si no existe, debe arrojar un error solicitando registrarlo previamente.
-        Negocio negocio = puertoNegocio.buscarPorId(negocioId)
-                .orElseThrow(() -> new NegocioNoEncontradoExcepcion("Error: El negocio no existe en la base de datos. Debe registrar el negocio previamente para poder procesar pagos."));
-
         if (monto <= 0) {
             throw new ValidacionDatosExcepcion("El monto a pagar debe ser estrictamente mayor a 0.");
         }
 
         // Ejecución transaccional protegida contra concurrencia (RNF5)
         return puertoTransaccion.ejecutarEnTransaccion(() -> {
-            Alquiler alquilerActivo = puertoAlquiler.buscarActivoPorNegocio(negocioId)
-                    .orElseThrow(() -> new ValidacionDatosExcepcion("El negocio '" + negocio.getNombreComercial() + "' no posee deudas o alquileres pendientes de cobro."));
-
-            // Descontar saldo y actualizar estado inmediatamente
-            alquilerActivo.abonar(monto);
-            puertoAlquiler.actualizar(alquilerActivo);
-
-            // Registrar comprobante de pago
-            Pago nuevoPago = new Pago(null, alquilerActivo.getId(), monto, fechaAbono, formaAbono);
-            nuevoPago.setNombreNegocio(negocio.getNombreComercial() + " (" + negocio.getNumeroLocal() + ")");
-            return puertoPago.guardar(nuevoPago);
+            Negocio negocio = puertoNegocio.buscarPorId(negocioId)
+                    .orElseThrow(() -> new NegocioNoEncontradoExcepcion("El negocio no existe. Regístrelo antes de procesar pagos."));
+            List<Alquiler> deudas = puertoAlquiler.listarActivosPorNegocio(negocioId);
+            if (deudas.isEmpty()) throw new ValidacionDatosExcepcion("El negocio no tiene deudas pendientes.");
+            java.math.BigDecimal restante = java.math.BigDecimal.valueOf(monto).setScale(2, java.math.RoundingMode.HALF_UP);
+            Pago ultimoPago = null;
+            for (Alquiler deuda : deudas) {
+                if (restante.signum() <= 0) break;
+                java.math.BigDecimal saldo = java.math.BigDecimal.valueOf(deuda.getSaldoPorPagar());
+                java.math.BigDecimal abono = restante.min(saldo);
+                deuda.abonar(abono.doubleValue());
+                if (!puertoAlquiler.actualizar(deuda)) throw new IllegalStateException("No se pudo actualizar el saldo del alquiler.");
+                Pago pago = new Pago(null, deuda.getId(), abono.doubleValue(), fechaAbono, formaAbono);
+                pago.setNombreNegocio(negocio.getNombreComercial() + " (" + negocio.getNumeroLocal() + ")");
+                ultimoPago = puertoPago.guardar(pago);
+                restante = restante.subtract(abono);
+            }
+            if (restante.signum() > 0) throw new ValidacionDatosExcepcion("El monto supera el total de las deudas pendientes.");
+            return ultimoPago;
         });
     }
 

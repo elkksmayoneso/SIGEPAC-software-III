@@ -1,10 +1,11 @@
 package sigepac.mvc.controladores;
 
-import sigepac.mvc.modelos.ModeloAlquiler;
+import sigepac.mvc.modelos.contratos.IModeloAlquiler;
 import java.util.*;
 
 public class ControladorAlquiler {
-    private final ModeloAlquiler modeloAlquiler = new ModeloAlquiler();
+    private final IModeloAlquiler modeloAlquiler;
+    public ControladorAlquiler(IModeloAlquiler modeloAlquiler) { this.modeloAlquiler = modeloAlquiler; }
 
     public List<Map<String, Object>> listarAlquileres() {
         return modeloAlquiler.obtenerTodos();

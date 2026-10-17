@@ -1,66 +1,9 @@
 package sigepac.mvc.modelos;
-
-import sigepac.mvc.configuracion.BaseDatos;
-import java.util.*;
-
-public class ModeloAlquiler {
-    private final BaseDatos bd = BaseDatos.obtenerInstancia();
-
-    public boolean crear(int idNegocio, String fechaInicio, String fechaLimite, double valor) {
-        synchronized (bd) {
-            if (!bd.tablaNegocios.containsKey(idNegocio)) {
-                return false;
-            }
-            int nuevoId = bd.obtenerSiguienteIdAlquiler();
-            Map<String, Object> alquiler = new HashMap<>();
-            alquiler.put("id_alquiler", nuevoId);
-            alquiler.put("id_negocio", idNegocio);
-            alquiler.put("fecha_inicio", fechaInicio);
-            alquiler.put("fecha_limite", fechaLimite);
-            alquiler.put("valor_total", valor);
-            alquiler.put("saldo_pendiente", valor);
-            alquiler.put("estado", "PENDIENTE");
-            bd.tablaAlquileres.put(nuevoId, alquiler);
-            return true;
-        }
-    }
-
-    public boolean actualizarDeuda(int idAlquiler, double nuevoValor, String nuevaFechaLimite) {
-        synchronized (bd) {
-            Map<String, Object> alq = bd.tablaAlquileres.get(idAlquiler);
-            if (alq == null) return false;
-            alq.put("valor_total", nuevoValor);
-            alq.put("saldo_pendiente", nuevoValor);
-            alq.put("fecha_limite", nuevaFechaLimite);
-            return true;
-        }
-    }
-
-    public List<Map<String, Object>> obtenerTodos() {
-        synchronized (bd) {
-            List<Map<String, Object>> lista = new ArrayList<>();
-            for (Map<String, Object> a : bd.tablaAlquileres.values()) {
-                Map<String, Object> copia = new HashMap<>(a);
-                Map<String, Object> neg = bd.tablaNegocios.get((Integer) a.get("id_negocio"));
-                if (neg != null) {
-                    copia.put("nombre_negocio", neg.get("nombre"));
-                    copia.put("local_numero", neg.get("local_numero"));
-                }
-                lista.add(copia);
-            }
-            return lista;
-        }
-    }
-
-    public List<Map<String, Object>> obtenerActivosPorNegocio(int idNegocio) {
-        synchronized (bd) {
-            List<Map<String, Object>> lista = new ArrayList<>();
-            for (Map<String, Object> a : bd.tablaAlquileres.values()) {
-                if ((Integer) a.get("id_negocio") == idNegocio && (Double) a.get("saldo_pendiente") > 0) {
-                    lista.add(new HashMap<>(a));
-                }
-            }
-            return lista;
-        }
-    }
+import sigepac.mvc.configuracion.ConexionMvc; import java.sql.*; import java.util.*;
+public class ModeloAlquiler implements sigepac.mvc.modelos.contratos.IModeloAlquiler {
+ private Map<String,Object> map(ResultSet r)throws SQLException{Map<String,Object> m=new HashMap<>();m.put("id_alquiler",r.getInt("id_alquiler"));m.put("id_negocio",r.getInt("id_negocio"));m.put("fecha_inicio",r.getString("fecha_inicio"));m.put("fecha_limite",r.getString("fecha_limite"));m.put("valor_total",r.getDouble("valor_total"));m.put("saldo_pendiente",r.getDouble("saldo_pendiente"));m.put("estado",r.getString("estado"));m.put("nombre_negocio",r.getString("nombre"));m.put("local_numero",r.getString("local_numero"));return m;}
+ public boolean crear(int negocio,String inicio,String limite,double valor){try(Connection c=ConexionMvc.abrir();PreparedStatement p=c.prepareStatement("INSERT INTO alquileres(id_negocio,fecha_inicio,fecha_limite,valor_total,saldo_pendiente,estado) VALUES(?,?,?,?,?,'PENDIENTE')")){p.setInt(1,negocio);p.setDate(2,java.sql.Date.valueOf(inicio));p.setDate(3,java.sql.Date.valueOf(limite));p.setBigDecimal(4,java.math.BigDecimal.valueOf(valor));p.setBigDecimal(5,java.math.BigDecimal.valueOf(valor));return p.executeUpdate()==1;}catch(SQLIntegrityConstraintViolationException e){return false;}catch(SQLException|IllegalArgumentException e){throw ConexionMvc.fallo(e);}}
+ public boolean actualizarDeuda(int id,double valor,String limite){try(Connection c=ConexionMvc.abrir();PreparedStatement p=c.prepareStatement("UPDATE alquileres SET valor_total=?,saldo_pendiente=?,fecha_limite=? WHERE id_alquiler=?")){p.setBigDecimal(1,java.math.BigDecimal.valueOf(valor));p.setBigDecimal(2,java.math.BigDecimal.valueOf(valor));p.setDate(3,java.sql.Date.valueOf(limite));p.setInt(4,id);return p.executeUpdate()>0;}catch(SQLException e){throw ConexionMvc.fallo(e);}}
+ public List<Map<String,Object>> obtenerTodos(){List<Map<String,Object>> a=new ArrayList<>();String q="SELECT a.*,n.nombre,n.local_numero FROM alquileres a JOIN negocios n ON n.id_negocio=a.id_negocio ORDER BY a.id_alquiler";try(Connection c=ConexionMvc.abrir();Statement s=c.createStatement();ResultSet r=s.executeQuery(q)){while(r.next())a.add(map(r));return a;}catch(SQLException e){throw ConexionMvc.fallo(e);}}
+ public List<Map<String,Object>> obtenerActivosPorNegocio(int id){List<Map<String,Object>> a=new ArrayList<>();String q="SELECT a.*,n.nombre,n.local_numero FROM alquileres a JOIN negocios n ON n.id_negocio=a.id_negocio WHERE a.id_negocio=? AND a.saldo_pendiente>0 ORDER BY a.id_alquiler FOR UPDATE";try(Connection c=ConexionMvc.abrir();PreparedStatement p=c.prepareStatement(q)){p.setInt(1,id);try(ResultSet r=p.executeQuery()){while(r.next())a.add(map(r));return a;}}catch(SQLException e){throw ConexionMvc.fallo(e);}}
 }

@@ -1,12 +1,13 @@
 package sigepac.mvc.controladores;
 
-import sigepac.mvc.modelos.ModeloPago;
-import sigepac.mvc.modelos.ModeloNegocio;
+import sigepac.mvc.modelos.contratos.IModeloPago;
+import sigepac.mvc.modelos.contratos.IModeloNegocio;
 import java.util.*;
 
 public class ControladorPago {
-    private final ModeloPago modeloPago = new ModeloPago();
-    private final ModeloNegocio modeloNegocio = new ModeloNegocio();
+    private final IModeloPago modeloPago;
+    private final IModeloNegocio modeloNegocio;
+    public ControladorPago(IModeloPago modeloPago, IModeloNegocio modeloNegocio) { this.modeloPago = modeloPago; this.modeloNegocio = modeloNegocio; }
 
     public List<Map<String, Object>> listarPagos() {
         return modeloPago.obtenerTodos();
